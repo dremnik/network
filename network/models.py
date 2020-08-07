@@ -18,3 +18,5 @@ class Post(models.Model):
     def remove_likes(self, n):
         if self.like_count - n >= 0:
             self.like_count -= n
+        else:
+            self.like_count = 0
