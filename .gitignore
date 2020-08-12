@@ -3,6 +3,10 @@ tags
 tags.lock
 tags.temp
 
+# Sass
+styles.scss
+styles.css.map
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -141,3 +145,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# NPM
+node_modules

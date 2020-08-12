@@ -1,0 +1,32 @@
+.container {
+  margin-top: 1em;
+}
+
+.bold-text {
+  font-weight: bold;
+}
+
+.postRow {
+  margin: 1em 0 0 0;
+  padding: 1.5em 1.5em 1.5em 1.5em;
+  border: 1px solid #ced4da;
+  border-radius: 0.25em;
+}
+.postRow p, .postRow a {
+  margin-bottom: 0.15em;
+}
+
+.charLimit:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 56, 72, 0.3);
+}
+
+#charCount {
+  text-align: right;
+}
+
+.postContent {
+  margin-top: 0.25em;
+}
+
+/*# sourceMappingURL=styles.css.map */

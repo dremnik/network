@@ -10,6 +10,7 @@ class User(AbstractUser):
     followers = models.ManyToManyField("self", related_name="followers")
     following = models.ManyToManyField("self", related_name="following")
 
+
 class Post(models.Model):
     """
     Model for representing network posts.
