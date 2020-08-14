@@ -2,6 +2,10 @@
   margin-top: 1em;
 }
 
+.form-control:focus {
+  box-shadow: none;
+}
+
 .bold-text {
   font-weight: bold;
 }
@@ -16,12 +20,11 @@
   margin-bottom: 0.15em;
 }
 
-.charLimit:focus {
+.fieldError {
   border-color: #dc3545;
-  box-shadow: 0 0 0 0.2rem rgba(220, 56, 72, 0.3);
 }
 
-#charCount {
+.text-right {
   text-align: right;
 }
 

@@ -1,6 +1,6 @@
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 
@@ -9,6 +9,12 @@ from .models import User
 
 def index(request):
     return render(request, "network/index.html")
+
+def new_post(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed("Sorry, that method is not allowed.")
+
+    return HttpResponse("TODO")
 
 
 def login_view(request):
@@ -19,7 +25,7 @@ def login_view(request):
         password = request.POST["password"]
         user = authenticate(request, username=username, password=password)
 
-        # Check if authentication successful
+        # Check if authentication successfucheck if authenticatedl
         if user is not None:
             login(request, user)
             return HttpResponseRedirect(reverse("index"))
@@ -43,8 +49,6 @@ def register(request):
     
     username = request.POST["username"]
     email = request.POST["email"]
-
-    # Ensure password matches confirmation
     password = request.POST["password"]
     confirmation = request.POST["confirmation"]
     if password != confirmation:
@@ -62,3 +66,10 @@ def register(request):
         })
     login(request, user)
     return HttpResponseRedirect(reverse("index"))
+
+
+def authenticated(request):
+    if request.user.is_authenticated:
+        return JsonResponse({'auth': True})
+    
+    return JsonResponse({'auth': False})
