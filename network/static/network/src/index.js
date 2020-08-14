@@ -1,5 +1,49 @@
 'use strict';
 
+class App extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            error: null,
+            isAuthenticated: false,
+        }
+    }
+
+    componentDidMount() {
+        fetch("/authenticated/")
+            .then(res => res.json())
+            .then(
+                (data) => {
+                    this.setState({
+                        isAuthenticated: data.auth,
+                    });
+                },
+                (error) => {
+                    this.setState({
+                        isAuthenticated: false,
+                        error
+                    });
+                }
+            );
+    }
+
+    render() {
+        const { error, isAuthenticated } = this.state;
+        if (error) {
+            return <div>Error: {error.message} </div>;
+        } 
+        return(
+            <div>
+                <h1>All Posts</h1>
+                {isAuthenticated && <div id="newPost"><NewPost /></div>}
+                <div>
+                    <Post />
+                </div>
+            </div>
+        )
+    }
+}
+
 class Post extends React.Component {
     render() {
         return (
@@ -57,58 +101,64 @@ class NewPost extends React.Component {
 
     // Handling for new posts
     handleClick() {
-        if (this.state.error) {
-            this.setState({error: null});
-        }
-        const input = this.state.response.trim()
+        this.setState({error: null}); // Initialize error to null by default so it disappears on next submit
+
+        const input = this.state.response.trim();
         if (input.length <= 0) {
             this.setState({error: "Post cannot be empty."});
+        } else {
+            // TODO: this could be broken into a new function. (makePost)
+            const csrftoken = getCookie('csrftoken'); // Need this in order to send a post request to Django
+            const options = {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+                body: JSON.stringify({ content: input })
+            }
+            fetch("/new_post/", options)
+                .then(res => res.json())
+                .then(
+                    (data) => {
+                        if (data.success) {
+                            // TODO
+                            // Need to do an async reload at this point
+                            console.log("the fetch was successful");
+                            this.setState({
+                                response: ""
+                            });
+                        } else {
+                            // No error in the fetch, but server returned error response.
+                            this.setState({
+                                error: data.error
+                            });
+                        }
+                    },
+                    // An error occurred in the fetch itself.
+                    (error) => {
+                        console.log(error.message);
+                    }
+                );
+            // Make this a function
         }
     }
 }
 
-class App extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            error: null,
-            isAuthenticated: false,
+
+// Helper function for retrieving cookies.
+// Source: Django docs - in order to use csrf token in AJAX requests.
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
         }
     }
-
-    componentDidMount() {
-        fetch("/authenticated/")
-            .then(res => res.json())
-            .then(
-                (data) => {
-                this.setState({
-                    isAuthenticated: data.auth,
-                });
-            },
-            (error) => {
-                this.setState({
-                    isAuthenticated: false,
-                    error
-                });
-            }
-        )
-    }
-
-    render() {
-        const { error, isAuthenticated } = this.state;
-        if (error) {
-            return <div>Error: {error.message} </div>;
-        } 
-        return(
-            <div>
-                <h1>All Posts</h1>
-                {isAuthenticated && <div id="newPost"><NewPost /></div>}
-                <div>
-                    <Post />
-                </div>
-            </div>
-        )
-    }
+    return cookieValue;
 }
 
 ReactDOM.render(<App />, document.getElementById('app-container'));

@@ -1,12 +1,36 @@
 from datetime import datetime
 
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.contrib.auth.password_validation import validate_password
 
 from .models import User, Post
 
 # Create your tests here.
-class UserTestCase(TestCase):
+class NewPostViewTest(TestCase):
+    def setUp(self):
+        user = User.objects.create_user("test_username", "testemail200@gmail.com", "dogsandcats100")
+
+    def test_not_authenticated(self):
+        c = Client()
+        response = c.post('/new_post/', data={"content": "This is invalid: user is not logged in."}, content_type="application/json")
+        self.assertEqual(response.status_code, 302)
+
+    def test_valid_post(self):
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"content": "This is a valid post."}, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_invalid_method(self):
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.get('/new_post/')
+        self.assertEqual(response.status_code, 405)
+
+    # TODO: write test cases for the other possible responses from 'new_post'
+
+
+class UserModelTest(TestCase):
     def setUp(self):
         self.username = "test_username"
         self.email = "testemail200@gmail.com"
@@ -57,7 +81,7 @@ class UserTestCase(TestCase):
         self.assertEqual(user.posts.count(), 2)
 
 
-class PostTestCase(TestCase):
+class PostModelTest(TestCase):
     def setUp(self):
         self.username = "test_username"
         self.password = "dogsandcats100"

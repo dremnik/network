@@ -8,8 +8,82 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var Post = function (_React$Component) {
-    _inherits(Post, _React$Component);
+var App = function (_React$Component) {
+    _inherits(App, _React$Component);
+
+    function App(props) {
+        _classCallCheck(this, App);
+
+        var _this = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
+
+        _this.state = {
+            error: null,
+            isAuthenticated: false
+        };
+        return _this;
+    }
+
+    _createClass(App, [{
+        key: "componentDidMount",
+        value: function componentDidMount() {
+            var _this2 = this;
+
+            fetch("/authenticated/").then(function (res) {
+                return res.json();
+            }).then(function (data) {
+                _this2.setState({
+                    isAuthenticated: data.auth
+                });
+            }, function (error) {
+                _this2.setState({
+                    isAuthenticated: false,
+                    error: error
+                });
+            });
+        }
+    }, {
+        key: "render",
+        value: function render() {
+            var _state = this.state,
+                error = _state.error,
+                isAuthenticated = _state.isAuthenticated;
+
+            if (error) {
+                return React.createElement(
+                    "div",
+                    null,
+                    "Error: ",
+                    error.message,
+                    " "
+                );
+            }
+            return React.createElement(
+                "div",
+                null,
+                React.createElement(
+                    "h1",
+                    null,
+                    "All Posts"
+                ),
+                isAuthenticated && React.createElement(
+                    "div",
+                    { id: "newPost" },
+                    React.createElement(NewPost, null)
+                ),
+                React.createElement(
+                    "div",
+                    null,
+                    React.createElement(Post, null)
+                )
+            );
+        }
+    }]);
+
+    return App;
+}(React.Component);
+
+var Post = function (_React$Component2) {
+    _inherits(Post, _React$Component2);
 
     function Post() {
         _classCallCheck(this, Post);
@@ -60,22 +134,22 @@ var Post = function (_React$Component) {
     return Post;
 }(React.Component);
 
-var NewPost = function (_React$Component2) {
-    _inherits(NewPost, _React$Component2);
+var NewPost = function (_React$Component3) {
+    _inherits(NewPost, _React$Component3);
 
     function NewPost(props) {
         _classCallCheck(this, NewPost);
 
-        var _this2 = _possibleConstructorReturn(this, (NewPost.__proto__ || Object.getPrototypeOf(NewPost)).call(this, props));
+        var _this4 = _possibleConstructorReturn(this, (NewPost.__proto__ || Object.getPrototypeOf(NewPost)).call(this, props));
 
-        _this2.state = {
+        _this4.state = {
             response: "",
             maxChars: 250,
             error: null
         };
-        _this2.handleChange = _this2.handleChange.bind(_this2);
-        _this2.handleClick = _this2.handleClick.bind(_this2);
-        return _this2;
+        _this4.handleChange = _this4.handleChange.bind(_this4);
+        _this4.handleClick = _this4.handleClick.bind(_this4);
+        return _this4;
     }
 
     _createClass(NewPost, [{
@@ -137,12 +211,43 @@ var NewPost = function (_React$Component2) {
     }, {
         key: "handleClick",
         value: function handleClick() {
-            if (this.state.error) {
-                this.setState({ error: null });
-            }
+            var _this5 = this;
+
+            this.setState({ error: null }); // Initialize error to null by default so it disappears on next submit
+
             var input = this.state.response.trim();
             if (input.length <= 0) {
                 this.setState({ error: "Post cannot be empty." });
+            } else {
+                // TODO: this could be broken into a new function. (makePost)
+                var csrftoken = getCookie('csrftoken'); // Need this in order to send a post request to Django
+                var options = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ content: input })
+                };
+                fetch("/new_post/", options).then(function (res) {
+                    return res.json();
+                }).then(function (data) {
+                    if (data.success) {
+                        // TODO
+                        // Need to do an async reload at this point
+                        console.log("the fetch was successful");
+                        _this5.setState({
+                            response: ""
+                        });
+                    } else {
+                        // No error in the fetch, but server returned error response.
+                        _this5.setState({
+                            error: data.error
+                        });
+                    }
+                },
+                // An error occurred in the fetch itself.
+                function (error) {
+                    console.log(error.message);
+                });
+                // Make this a function
             }
         }
     }]);
@@ -150,78 +255,24 @@ var NewPost = function (_React$Component2) {
     return NewPost;
 }(React.Component);
 
-var App = function (_React$Component3) {
-    _inherits(App, _React$Component3);
+// Helper function for retrieving cookies.
+// Source: Django docs - in order to use csrf token in AJAX requests.
 
-    function App(props) {
-        _classCallCheck(this, App);
 
-        var _this3 = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
-
-        _this3.state = {
-            error: null,
-            isAuthenticated: false
-        };
-        return _this3;
-    }
-
-    _createClass(App, [{
-        key: "componentDidMount",
-        value: function componentDidMount() {
-            var _this4 = this;
-
-            fetch("/authenticated/").then(function (res) {
-                return res.json();
-            }).then(function (data) {
-                _this4.setState({
-                    isAuthenticated: data.auth
-                });
-            }, function (error) {
-                _this4.setState({
-                    isAuthenticated: false,
-                    error: error
-                });
-            });
-        }
-    }, {
-        key: "render",
-        value: function render() {
-            var _state = this.state,
-                error = _state.error,
-                isAuthenticated = _state.isAuthenticated;
-
-            if (error) {
-                return React.createElement(
-                    "div",
-                    null,
-                    "Error: ",
-                    error.message,
-                    " "
-                );
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === name + '=') {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
-            return React.createElement(
-                "div",
-                null,
-                React.createElement(
-                    "h1",
-                    null,
-                    "All Posts"
-                ),
-                isAuthenticated && React.createElement(
-                    "div",
-                    { id: "newPost" },
-                    React.createElement(NewPost, null)
-                ),
-                React.createElement(
-                    "div",
-                    null,
-                    React.createElement(Post, null)
-                )
-            );
         }
-    }]);
-
-    return App;
-}(React.Component);
+    }
+    return cookieValue;
+}
 
 ReactDOM.render(React.createElement(App, null), document.getElementById('app-container'));
