@@ -86,7 +86,7 @@ class NewPost extends React.Component {
         return (
             <div class="container postRow">
                 <h4 class="bold-text">New Post</h4>
-                <textarea onChange={this.handleChange} rows="4" cols="50" class={classes.input} maxlength="250" value={this.state.response}></textarea>
+                <textarea id="newPostField" onChange={this.handleChange} rows="4" cols="50" class={classes.input} maxlength="250" value={this.state.response}></textarea>
                 {this.state.error && <div><p id="newPostError" class="text-danger text-right">{this.state.error}</p></div> /* handling for errors */} 
                 <p id="charCount" class={classes.count}>{this.state.response.length}/{this.state.maxChars}</p>
                 <button onClick={this.handleClick} id="newPostButton" type="submit" class="btn btn-primary">Post</button>

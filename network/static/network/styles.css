@@ -2,8 +2,9 @@
   margin-top: 1em;
 }
 
-.form-control:focus {
+#newPostField:focus {
   box-shadow: none;
+  border-color: #ced4da;
 }
 
 .bold-text {

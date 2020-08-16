@@ -173,7 +173,7 @@ var NewPost = function (_React$Component3) {
                     { "class": "bold-text" },
                     "New Post"
                 ),
-                React.createElement("textarea", { onChange: this.handleChange, rows: "4", cols: "50", "class": classes.input, maxlength: "250", value: this.state.response }),
+                React.createElement("textarea", { id: "newPostField", onChange: this.handleChange, rows: "4", cols: "50", "class": classes.input, maxlength: "250", value: this.state.response }),
                 this.state.error && React.createElement(
                     "div",
                     null,

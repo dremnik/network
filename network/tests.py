@@ -22,12 +22,48 @@ class NewPostViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_invalid_method(self):
+        """ Not a POST request """
         c = Client()
         c.login(username="test_username", password="dogsandcats100")
         response = c.get('/new_post/')
         self.assertEqual(response.status_code, 405)
 
-    # TODO: write test cases for the other possible responses from 'new_post'
+    def test_invalid_post_object(self):
+        """ Post object in JSON is not of the right format - key is 'post' instead of 'content'"""
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"post": "This is a not a valid post."}, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['success'], False)
+        self.assertEqual(response.json()['error'], "invalid format: must be of form {'content': '*post_content*'}")
+
+    def test_invalid_payload(self):
+        """ Payload is not JSON """
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"content": "this is an invalid payload."}, content_type="text/xml")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['success'], False)
+        self.assertEqual(response.json()['error'], "invalid format: must be JSON.")
+
+    def test_invalid_content_length(self):
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        content = ""
+        for i in range(15):
+            content += "asdfasdfasdfsadfasdf" # creating a long post
+        response = c.post('/new_post/', data={"content": content}, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['success'], False)
+        self.assertEqual(response.json()['error'], "invalid post: content length exceeds 250 chars.")
+
+    def test_add_post_to_db(self):
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"content": "This is a valid post."}, content_type="application/json")
+        user = User.objects.get(username="test_username")
+        post = Post.objects.get(content="This is a valid post.")
+        self.assertEqual(post.author, user)
 
 
 class UserModelTest(TestCase):
