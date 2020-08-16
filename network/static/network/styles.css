@@ -2,6 +2,11 @@
   margin-top: 1em;
 }
 
+#newPostField:focus {
+  box-shadow: none;
+  border-color: #ced4da;
+}
+
 .bold-text {
   font-weight: bold;
 }
@@ -16,12 +21,11 @@
   margin-bottom: 0.15em;
 }
 
-.charLimit:focus {
+.fieldError {
   border-color: #dc3545;
-  box-shadow: 0 0 0 0.2rem rgba(220, 56, 72, 0.3);
 }
 
-#charCount {
+.text-right {
   text-align: right;
 }
 

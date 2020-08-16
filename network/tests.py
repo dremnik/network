@@ -1,12 +1,72 @@
 from datetime import datetime
 
-from django.test import TestCase
+from django.test import TestCase, Client
 from django.contrib.auth.password_validation import validate_password
 
 from .models import User, Post
 
 # Create your tests here.
-class UserTestCase(TestCase):
+class NewPostViewTest(TestCase):
+    def setUp(self):
+        user = User.objects.create_user("test_username", "testemail200@gmail.com", "dogsandcats100")
+
+    def test_not_authenticated(self):
+        c = Client()
+        response = c.post('/new_post/', data={"content": "This is invalid: user is not logged in."}, content_type="application/json")
+        self.assertEqual(response.status_code, 302)
+
+    def test_valid_post(self):
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"content": "This is a valid post."}, content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+    def test_invalid_method(self):
+        """ Not a POST request """
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.get('/new_post/')
+        self.assertEqual(response.status_code, 405)
+
+    def test_invalid_post_object(self):
+        """ Post object in JSON is not of the right format - key is 'post' instead of 'content'"""
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"post": "This is a not a valid post."}, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['success'], False)
+        self.assertEqual(response.json()['error'], "invalid format: must be of form {'content': '*post_content*'}")
+
+    def test_invalid_payload(self):
+        """ Payload is not JSON """
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"content": "this is an invalid payload."}, content_type="text/xml")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['success'], False)
+        self.assertEqual(response.json()['error'], "invalid format: must be JSON.")
+
+    def test_invalid_content_length(self):
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        content = ""
+        for i in range(15):
+            content += "asdfasdfasdfsadfasdf" # creating a long post
+        response = c.post('/new_post/', data={"content": content}, content_type="application/json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['success'], False)
+        self.assertEqual(response.json()['error'], "invalid post: content length exceeds 250 chars.")
+
+    def test_add_post_to_db(self):
+        c = Client()
+        c.login(username="test_username", password="dogsandcats100")
+        response = c.post('/new_post/', data={"content": "This is a valid post."}, content_type="application/json")
+        user = User.objects.get(username="test_username")
+        post = Post.objects.get(content="This is a valid post.")
+        self.assertEqual(post.author, user)
+
+
+class UserModelTest(TestCase):
     def setUp(self):
         self.username = "test_username"
         self.email = "testemail200@gmail.com"
@@ -57,7 +117,7 @@ class UserTestCase(TestCase):
         self.assertEqual(user.posts.count(), 2)
 
 
-class PostTestCase(TestCase):
+class PostModelTest(TestCase):
     def setUp(self):
         self.username = "test_username"
         self.password = "dogsandcats100"
