@@ -33,4 +33,17 @@
   margin-top: 0.25em;
 }
 
+.likeHeart {
+  margin: 0 0.25em 0.25em 0;
+}
+
+.likeHeartAuth {
+  cursor: pointer;
+  margin: 0 0.25em 0.25em 0;
+}
+
+.likeCount {
+  display: inline;
+}
+
 /*# sourceMappingURL=styles.css.map */

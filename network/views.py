@@ -6,19 +6,18 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import render
 from django.urls import reverse
+from django.core.paginator import Paginator
+from django.core.serializers import serialize
 
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.contrib.auth.decorators import login_required
 
 from .models import User, Post
-
 
 @ensure_csrf_cookie
 def index(request):
     return render(request, "network/index.html")
 
-@login_required
-def new_post(request):
+def create_post(request):
     """
     Handles the creation of a new post.
     It only accepts HTTP POST requests, and the payload body should contain a JSON
@@ -26,6 +25,8 @@ def new_post(request):
     """
     if request.method != "POST":
         return HttpResponseNotAllowed("Sorry, that method is not allowed.")
+    elif not request.user.is_authenticated:
+        return JsonResponse({"success": False, "error": "auth error: must be authenticated to post to this endpoint"})
 
     try:
         post = json.loads(request.body)
@@ -39,8 +40,54 @@ def new_post(request):
     elif len(post_content) > 250:
         return JsonResponse({"success": False, "error": "invalid post: content length exceeds 250 chars."}, status=400)
 
-    # Don't think we need to worry about user being invalid, @login_required should take care of that case.
     Post.objects.create(author=request.user, content=post_content)
+
+    return JsonResponse({"success": True, "error": None})
+
+
+def list_posts(request):
+    """
+    Returns a page worth of posts specified by page.
+    """
+    if request.method != "GET":
+        return HttpResponseNotAllowed("Sorry, that method is not allowed.")
+
+    page_num = request.GET.get('page')
+    pages = Paginator(Post.objects.order_by('-id'), 10)
+    page = pages.page(page_num).object_list
+
+    posts = serialize('json', page, use_natural_foreign_keys=True, use_natural_primary_keys=True)
+
+    return HttpResponse(posts, content_type="application/json")
+
+
+def create_like(request, post_id):
+    """
+    Add a like to a post.
+    Must be authenticated to post to this endpoint.
+    """
+    if request.method != "POST":
+        return HttpResponseNotAllowed("Sorry, that method is not allowed.")
+    elif not request.user.is_authenticated:
+        return JsonResponse({"success": False, "error": "auth error: must be authenticated to post to this endpoint"})
+
+    post = Post.objects.get(pk=post_id)
+    post.add_like(request.user)
+
+    return JsonResponse({"success": True, "error": None})
+
+def destroy_like(request, post_id):
+    """
+    Remove a like from a post.
+    Must be authenticated to post to this endpoint.
+    """
+    if request.method != "POST":
+        return HttpResponseNotAllowed("Sorry, that method is not allowed.")
+    elif not request.user.is_authenticated:
+        return JsonResponse({"success": False, "error": "auth error: must be authenticated to post to this endpoint"})
+
+    post = Post.objects.get(pk=post_id)
+    post.remove_like(request.user)
 
     return JsonResponse({"success": True, "error": None})
 
@@ -51,7 +98,6 @@ def login_view(request):
         password = request.POST["password"]
         user = authenticate(request, username=username, password=password)
 
-        # Check if authentication successfucheck if authenticatedl
         if user is not None:
             login(request, user)
             return HttpResponseRedirect(reverse("index"))
@@ -67,7 +113,7 @@ def logout_view(request):
     return HttpResponseRedirect(reverse("index"))
 
 def register(request):
-    # render for everything except POST
+    # render for every method except POST
     if request.method != "POST":
         return render(request, "network/register.html")
 
@@ -94,7 +140,7 @@ def register(request):
 
 def authenticated(request):
     if request.user.is_authenticated:
-        return JsonResponse({'auth': True})
+        return JsonResponse({'auth': True, 'user': request.user.username})
 
-    return JsonResponse({'auth': False})
+    return JsonResponse({'auth': False, 'user': None})
 

@@ -6,7 +6,12 @@ class App extends React.Component {
         this.state = {
             error: null,
             isAuthenticated: false,
+			user: "",
+			page: 1,
+			posts: [],
         }
+		this.loadPosts = this.loadPosts.bind(this);
+		this.handleMakePost = this.handleMakePost.bind(this);
     }
 
     componentDidMount() {
@@ -16,6 +21,7 @@ class App extends React.Component {
                 (data) => {
                     this.setState({
                         isAuthenticated: data.auth,
+						user: data.user,
                     });
                 },
                 (error) => {
@@ -25,6 +31,8 @@ class App extends React.Component {
                     });
                 }
             );
+		// Load initial posts.
+		this.loadPosts(this.state.page);
     }
 
     render() {
@@ -32,31 +40,130 @@ class App extends React.Component {
         if (error) {
             return <div>Error: {error.message} </div>;
         } 
+		const posts = this.state.posts.map(post => 
+			<Post user={this.state.user} key={post.pk} id={post.pk} post={post.fields}/>
+		);
         return(
             <div>
                 <h1>All Posts</h1>
-                {isAuthenticated && <div id="newPost"><NewPost /></div>}
+                {isAuthenticated && <div id="newPost"><NewPost onMakePost={this.handleMakePost}/></div>}
                 <div>
-                    <Post />
+					{posts}
                 </div>
             </div>
         )
     }
+
+	handleMakePost() {
+		this.setState({page: 1}, this.loadPosts());
+	}
+
+	// Load new page of posts.
+	loadPosts() {
+		const page = this.state.page; 
+		fetch(`posts/list/?page=${page}`)
+            .then(res => res.json())
+			.then(data => {
+				const new_posts = data;
+				this.setState({
+					posts: new_posts,
+				});
+			})
+			.catch(error => {
+				console.log("could not retrieve posts: ", error);
+			});
+	}
+
 }
 
 class Post extends React.Component {
-    render() {
-        return (
-            <div class="container postRow">
-                <h5 class="bold-text">Foo</h5>
-                <a href="#">Edit</a>
-                <p class="postContent">Hello!</p>
-                <p class="timestamp text-muted">Timestamp: TODO</p>
-                <p class="text-muted"># likes: TODO</p>
-                <p class="text-muted">Comment?</p>
-            </div>
-        );
-    }
+	constructor(props) {
+		super(props);
+
+		const date = new Date(props.post.timestamp); // converting ISO timestamp to human readable
+		const timestamp = date.toDateString() + ', ' + date.toLocaleTimeString();
+		const likedByMe = props.post.liked_by.includes(props.user); // was post liked by current user?
+		this.state = {
+			current_user: props.user,
+			id: props.id,
+			author: props.post.author,
+			content: props.post.content,
+			likeCount: props.post.liked_by.length,
+			timestamp: timestamp,
+			likedByMe: likedByMe
+		}
+		this.handleLikeClick = this.handleLikeClick.bind(this);
+		// this.handleEditClick = this.handleEditClick.bind(this);
+	}
+
+	render() {
+		const authorIsMe = this.state.author === this.state.current_user;
+		let heartClass = "likeHeart";
+		if (this.state.current_user != null)
+			heartClass = "likeHeartAuth"; // enabling cursor pointer
+
+		return (
+			<div class="container postRow">
+				<h5 class="bold-text">{this.state.author}</h5>
+				{authorIsMe // only render edit if author is me
+					? <a href="#">Edit</a>
+					: <div></div>
+				}
+				<p class="postContent">{this.state.content}</p>
+				<p class="timestamp text-muted">{this.state.timestamp}</p>
+				<span>
+					{this.state.likedByMe // render red heart if post has likes
+						? <img onClick={this.handleLikeClick} class={heartClass} src="static/network/assets/red-heart-icon.png"/>
+						: <img onClick={this.handleLikeClick} class={heartClass} src="static/network/assets/heart-icon-sm.png"/>
+					}
+					<p class="text-muted likeCount">{this.state.likeCount}</p>
+				</span>
+				<p class="text-muted">Comment?</p>
+			</div>
+		);
+	}
+
+	handleLikeClick() {
+		// if no user is logged in
+		if (this.state.current_user === null)
+			return false;
+		
+		let url = "";
+		// if current user hasn't liked post
+		if (!this.state.likedByMe) { 
+			this.setState((state) => ({
+				likeCount: state.likeCount + 1,
+				likedByMe: true
+			}));
+			url = `/likes/create/${this.state.id}/`;
+		} else { // if current user has liked post 
+			this.setState((state) => ({ 
+				likeCount: state.likeCount - 1,
+				likedByMe: false
+			}));
+			url = `/likes/destroy/${this.state.id}/`;
+		}
+		const csrftoken = getCookie('csrftoken'); // needed for Django POST
+		const options = {
+			method: 'POST',
+			headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+		}
+		// Note that the URL is dependent on whether user has liked post already or not.
+		fetch(url, options)
+			.then(res => res.json())
+			.then(data => {
+				if (!data.success)
+					console.log(data.error);
+			})
+			.catch(error => { 
+				console.log("could not create/destroy like", error);
+			});
+	}
+
+	// handleEditClick() {
+	// 	// TODO
+	// 	return false;
+	// }
 }
 
 class NewPost extends React.Component {
@@ -70,6 +177,7 @@ class NewPost extends React.Component {
         };
         this.handleChange = this.handleChange.bind(this);
         this.handleClick = this.handleClick.bind(this);
+        this.makePost = this.makePost.bind(this);
     }
 
     render() {
@@ -85,7 +193,7 @@ class NewPost extends React.Component {
         }
         return (
             <div class="container postRow">
-                <h4 class="bold-text">New Post</h4>
+				<h4 class="bold-text">New Post</h4>
                 <textarea id="newPostField" onChange={this.handleChange} rows="4" cols="50" class={classes.input} maxlength="250" value={this.state.response}></textarea>
                 {this.state.error && <div><p id="newPostError" class="text-danger text-right">{this.state.error}</p></div> /* handling for errors */} 
                 <p id="charCount" class={classes.count}>{this.state.response.length}/{this.state.maxChars}</p>
@@ -107,41 +215,42 @@ class NewPost extends React.Component {
         if (input.length <= 0) {
             this.setState({error: "Post cannot be empty."});
         } else {
-            // TODO: this could be broken into a new function. (makePost)
-            const csrftoken = getCookie('csrftoken'); // Need this in order to send a post request to Django
-            const options = {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
-                body: JSON.stringify({ content: input })
-            }
-            fetch("/new_post/", options)
-                .then(res => res.json())
-                .then(
-                    (data) => {
-                        if (data.success) {
-                            // TODO
-                            // Need to do an async reload at this point
-                            console.log("the fetch was successful");
-                            this.setState({
-                                response: ""
-                            });
-                        } else {
-                            // No error in the fetch, but server returned error response.
-                            this.setState({
-                                error: data.error
-                            });
-                        }
-                    },
-                    // An error occurred in the fetch itself.
-                    (error) => {
-                        console.log(error.message);
-                    }
-                );
-            // Make this a function
+			this.makePost(input);
         }
     }
-}
 
+	// Handler for user creating posts.
+	makePost(content) {
+		const csrftoken = getCookie('csrftoken'); // Need this in order to send a post request to Django
+		const options = {
+			method: 'POST',
+			headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrftoken},
+			body: JSON.stringify({ content: content })
+		}
+		fetch("/posts/create/", options)
+			.then(res => res.json())
+			.then(
+				(data) => {
+					if (data.success) {
+						this.props.onMakePost(); // notify parent element
+						this.setState({
+							response: ""
+						});
+					} else {
+						// No error in the fetch, but server returned error response.
+						this.setState({
+							error: data.error
+						});
+					}
+				},
+				// An error occurred in the fetch itself.
+				(error) => {
+					console.log(error.message);
+				}
+			);
+	}
+
+}
 
 // Helper function for retrieving cookies.
 // Source: Django docs - in order to use csrf token in AJAX requests.
