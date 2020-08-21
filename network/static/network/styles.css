@@ -33,4 +33,26 @@
   margin-top: 0.25em;
 }
 
+.likeHeart {
+  margin: 0 0.25em 0.25em 0;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.inline-text {
+  display: inline;
+}
+
+.profile-info {
+  margin-bottom: 0.5em;
+}
+
+.profile-pic {
+  margin-right: 0.75em;
+  border-radius: 50%;
+  border: 1px solid #ced4da;
+}
+
 /*# sourceMappingURL=styles.css.map */

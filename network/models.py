@@ -1,14 +1,23 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 
 
 # Create your models here
+class UserManager(UserManager):
+    def get_by_natural_key(self, username):
+        return self.get(username=username)
+
 class User(AbstractUser):
     """
     Model for representing network users.
     """
     followers = models.ManyToManyField("self", related_name="followers")
     following = models.ManyToManyField("self", related_name="following")
+
+    objects = UserManager()
+
+    def natural_key(self):
+        return self.username
 
 
 class Post(models.Model):
@@ -25,6 +34,9 @@ class Post(models.Model):
         Adds a new like to this post by the user passed in
         """
         self.liked_by.add(user)
+
+    def remove_like(self, user):
+        self.liked_by.remove(user)
 
     def get_like_count(self):
         """Returns the number of likes on this post"""
