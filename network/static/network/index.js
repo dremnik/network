@@ -68,7 +68,7 @@ var App = function (_React$Component) {
 				);
 			}
 			var posts = this.state.posts.map(function (post) {
-				return React.createElement(Post, { user: _this3.state.user, key: post.pk, id: post.pk, post: post.fields });
+				return React.createElement(Post, { onMakePost: _this3.handleMakePost, user: _this3.state.user, key: post.pk, id: post.pk, post: post.fields });
 			});
 			return React.createElement(
 				"div",
@@ -81,7 +81,16 @@ var App = function (_React$Component) {
 				isAuthenticated && React.createElement(
 					"div",
 					{ id: "newPost" },
-					React.createElement(NewPost, { onMakePost: this.handleMakePost })
+					React.createElement(
+						"div",
+						{ "class": "container postRow" },
+						React.createElement(
+							"h4",
+							{ "class": "bold-text" },
+							"New Post"
+						),
+						React.createElement(NewPost, { isNew: true, text: "", onMakePost: this.handleMakePost })
+					)
 				),
 				React.createElement(
 					"div",
@@ -92,8 +101,11 @@ var App = function (_React$Component) {
 		}
 	}, {
 		key: "handleMakePost",
-		value: function handleMakePost() {
-			this.setState({ page: 1 }, this.loadPosts());
+		value: function handleMakePost(isNew, content) {
+			var page = this.state.page;
+			if (isNew) page = 1;
+
+			this.setState({ page: page }, this.loadPosts());
 		}
 
 		// Load new page of posts.
@@ -107,9 +119,8 @@ var App = function (_React$Component) {
 			fetch("posts/list/?page=" + page).then(function (res) {
 				return res.json();
 			}).then(function (data) {
-				var new_posts = data;
 				_this4.setState({
-					posts: new_posts
+					posts: data
 				});
 			}).catch(function (error) {
 				console.log("could not retrieve posts: ", error);
@@ -138,10 +149,13 @@ var Post = function (_React$Component2) {
 			content: props.post.content,
 			likeCount: props.post.liked_by.length,
 			timestamp: timestamp,
-			likedByMe: likedByMe
+			likedByMe: likedByMe,
+			editing: false
 		};
 		_this5.handleLikeClick = _this5.handleLikeClick.bind(_this5);
-		// this.handleEditClick = this.handleEditClick.bind(this);
+		_this5.handleEditClick = _this5.handleEditClick.bind(_this5);
+		_this5.handleUpdatePost = _this5.handleUpdatePost.bind(_this5);
+		_this5.handleProfileClick = _this5.handleProfileClick.bind(_this5);
 		return _this5;
 	}
 
@@ -150,23 +164,28 @@ var Post = function (_React$Component2) {
 		value: function render() {
 			var authorIsMe = this.state.author === this.state.current_user;
 			var heartClass = "likeHeart";
-			if (this.state.current_user != null) heartClass = "likeHeartAuth"; // enabling cursor pointer
+			if (this.state.current_user != null) heartClass += " clickable"; // enabling cursor pointer
 
 			return React.createElement(
 				"div",
 				{ "class": "container postRow" },
 				React.createElement(
-					"h5",
-					{ "class": "bold-text" },
-					this.state.author
+					"div",
+					{ "class": "profile-info" },
+					React.createElement("img", { onClick: this.handleProfileClick, "class": "profile-pic clickable", src: "static/network/assets/profile_pic.jpg" }),
+					React.createElement(
+						"h5",
+						{ "class": "bold-text inline-text" },
+						this.state.author
+					)
 				),
-				authorIsMe // only render edit if author is me
+				authorIsMe && !this.state.editing // only render edit if author is me and not editing
 				? React.createElement(
 					"a",
-					{ href: "#" },
+					{ onClick: this.handleEditClick, href: "#" },
 					"Edit"
 				) : React.createElement("div", null),
-				React.createElement(
+				this.state.editing ? React.createElement(NewPost, { isNew: false, editId: this.state.id, text: this.state.content, onMakePost: this.handleUpdatePost }) : React.createElement(
 					"p",
 					{ "class": "postContent" },
 					this.state.content
@@ -179,11 +198,11 @@ var Post = function (_React$Component2) {
 				React.createElement(
 					"span",
 					null,
-					this.state.likedByMe // render red heart if post has likes
+					this.state.likedByMe // render red heart current user has liked post.
 					? React.createElement("img", { onClick: this.handleLikeClick, "class": heartClass, src: "static/network/assets/red-heart-icon.png" }) : React.createElement("img", { onClick: this.handleLikeClick, "class": heartClass, src: "static/network/assets/heart-icon-sm.png" }),
 					React.createElement(
 						"p",
-						{ "class": "text-muted likeCount" },
+						{ "class": "text-muted inline-text" },
 						this.state.likeCount
 					)
 				),
@@ -198,7 +217,7 @@ var Post = function (_React$Component2) {
 		key: "handleLikeClick",
 		value: function handleLikeClick() {
 			// if no user is logged in
-			if (this.state.current_user === null) return false;
+			if (this.state.current_user == null) return false;
 
 			var url = "";
 			// if current user hasn't liked post
@@ -228,21 +247,40 @@ var Post = function (_React$Component2) {
 			};fetch(url, options).then(function (res) {
 				return res.json();
 			}).then(function (data) {
-				if (!data.success) console.log(data.error);
+				if (data.error) // server returned error message
+					console.log(data.error);
 			}).catch(function (error) {
 				console.log("could not create/destroy like", error);
 			});
 		}
-
-		// handleEditClick() {
-		// 	// TODO
-		// 	return false;
-		// }
-
+	}, {
+		key: "handleEditClick",
+		value: function handleEditClick() {
+			this.setState({ editing: true });
+		}
+	}, {
+		key: "handleUpdatePost",
+		value: function handleUpdatePost(isNew, newContent) {
+			// isNew will be always be false, as this is an edited post. bit of a poor design choice.
+			this.setState({
+				editing: false,
+				content: newContent // manually setting content to force render
+			});
+			this.props.onMakePost(false, null); // notify parent element
+		}
+	}, {
+		key: "handleProfileClick",
+		value: function handleProfileClick() {
+			// TODO
+			return false;
+		}
 	}]);
 
 	return Post;
 }(React.Component);
+
+// NewPost represents the necessary components to create or edit a post.
+
 
 var NewPost = function (_React$Component3) {
 	_inherits(NewPost, _React$Component3);
@@ -253,7 +291,9 @@ var NewPost = function (_React$Component3) {
 		var _this6 = _possibleConstructorReturn(this, (NewPost.__proto__ || Object.getPrototypeOf(NewPost)).call(this, props));
 
 		_this6.state = {
-			response: "",
+			isNew: _this6.props.isNew,
+			editId: _this6.props.editId,
+			response: _this6.props.text,
 			maxChars: 250,
 			error: null
 		};
@@ -278,12 +318,7 @@ var NewPost = function (_React$Component3) {
 			}
 			return React.createElement(
 				"div",
-				{ "class": "container postRow" },
-				React.createElement(
-					"h4",
-					{ "class": "bold-text" },
-					"New Post"
-				),
+				null,
 				React.createElement("textarea", { id: "newPostField", onChange: this.handleChange, rows: "4", cols: "50", "class": classes.input, maxlength: "250", value: this.state.response }),
 				this.state.error && React.createElement(
 					"div",
@@ -345,20 +380,23 @@ var NewPost = function (_React$Component3) {
 				headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
 				body: JSON.stringify({ content: content })
 			};
-			fetch("/posts/create/", options).then(function (res) {
+			var url = "/posts/create/";
+			if (!this.state.isNew) // this means it is a post being edited
+				url = "/posts/update/" + this.state.editId + "/";
+
+			fetch(url, options).then(function (res) {
 				return res.json();
 			}).then(function (data) {
-				if (data.success) {
-					_this7.props.onMakePost(); // notify parent element
-					_this7.setState({
-						response: ""
-					});
-				} else {
+				if (data.error) {
 					// No error in the fetch, but server returned error response.
 					_this7.setState({
 						error: data.error
 					});
 				}
+				_this7.props.onMakePost(_this7.state.isNew, content); // notify parent element
+				_this7.setState({
+					response: ""
+				});
 			},
 			// An error occurred in the fetch itself.
 			function (error) {

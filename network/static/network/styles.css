@@ -37,13 +37,22 @@
   margin: 0 0.25em 0.25em 0;
 }
 
-.likeHeartAuth {
+.clickable {
   cursor: pointer;
-  margin: 0 0.25em 0.25em 0;
 }
 
-.likeCount {
+.inline-text {
   display: inline;
+}
+
+.profile-info {
+  margin-bottom: 0.5em;
+}
+
+.profile-pic {
+  margin-right: 0.75em;
+  border-radius: 50%;
+  border: 1px solid #ced4da;
 }
 
 /*# sourceMappingURL=styles.css.map */
